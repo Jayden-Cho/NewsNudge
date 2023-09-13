@@ -256,7 +256,7 @@ if __name__ == '__main__':
     # since it will be loaded from checkpoint later
     model = Model(config).to(device)
     from train import latest_checkpoint  # Avoid circular imports
-    checkpoint_path = latest_checkpoint(path.join('./checkpoint', model_name))
+    checkpoint_path = latest_checkpoint(path.join('../checkpoint', model_name))
 
     if checkpoint_path is not None:
         checkpoint = torch.load(checkpoint_path)
