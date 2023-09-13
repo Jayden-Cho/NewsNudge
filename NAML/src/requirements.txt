@@ -4,3 +4,11 @@ beautifulsoup4 >= 4.11.1
 googletrans==3.1.0a0
 pandas >=2.0.3
 google-cloud-storage >= 2.10.0
+torch
+numpy
+pandas
+tqdm
+nltk
+scikit-learn
+swifter
+ray[tune]
