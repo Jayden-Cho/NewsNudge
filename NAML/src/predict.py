@@ -164,7 +164,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
         list(news2vector.values())[0].size())
 
     user_dataset = UserDataset(path.join(directory, 'behaviors.tsv'),
-                               '../data/predict/user2int.tsv')
+                               path.join(directory, 'user2int.tsv'))
     user_dataloader = DataLoader(user_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=False,
@@ -230,6 +230,24 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
     return category_to_news
 
+
+# def make_prediction():
+#     print('Using device:', device)
+#     print(f'Evaluating model {model_name}')
+
+#     model = Model(config).to(device)
+
+#     from train import latest_checkpoint  # Avoid circular imports
+#     checkpoint_path = latest_checkpoint(path.join('./checkpoint', model_name))
+
+#     if checkpoint_path is not None:
+#         checkpoint = torch.load(checkpoint_path)
+#         model.load_state_dict(checkpoint['model_state_dict'])
+
+#     model.eval()
+#     recommendations = predict(model, './data/predict', config.num_workers)
+    
+#     return recommendations
 
 if __name__ == '__main__':
     print('Using device:', device)

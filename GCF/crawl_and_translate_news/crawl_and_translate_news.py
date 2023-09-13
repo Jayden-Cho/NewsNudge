@@ -112,7 +112,6 @@ def generate_tsv(request):
     bucket_name = 'newsnudge'
     blob_name = 'news.tsv'
 
-    
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
