@@ -17,13 +17,15 @@ def test_gsp(request):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob('/data/predict/{}'.format(blob_name))
 
-    blob.download_to_filename(file_name)
+    blob.download_as_text(file_name)
 
     print(
-        "Downloaded storage object {} from bucket {} to local file {}.".format(
-            '/data/predict/{}'.format(blob_name), bucket_name, file_name
+        "Downloaded storage object {} from bucket {} to local file.".format(
+            '/data/predict/{}'.format(blob_name), bucket_name
         )
     )
+
+    print(file_name)
     # print("I'm curious what blob is:", type(blob), blob)
 
     # if blob.exists():
