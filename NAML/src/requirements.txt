@@ -11,3 +11,4 @@ nltk
 scikit-learn
 swifter
 ray[tune]
+gcsfs

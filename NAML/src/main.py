@@ -2,6 +2,7 @@ from google.cloud import storage
 from os import path
 import importlib
 from config import model_name
+import pandas as pd
 
 
 
@@ -13,19 +14,13 @@ def test_gsp(request):
     blob_name = 'news.tsv'
     file_name = 'news'
 
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob('/data/predict/{}'.format(blob_name))
+    client = storage.Client()
 
-    blob.download_as_text(file_name)
+    print("Instead of using a hard way, we can read the tsv file directly from  gsutil.")
 
-    print(
-        "Downloaded storage object {} from bucket {} to local file.".format(
-            '/data/predict/{}'.format(blob_name), bucket_name
-        )
-    )
+    df = pd.read_table("gs://newsnudge/data/predict/news.tsv", encoding='utf-8')
+    print(df.head())
 
-    print(file_name)
     # print("I'm curious what blob is:", type(blob), blob)
 
     # if blob.exists():
