@@ -5,6 +5,7 @@ import torch
 from config import model_name
 from google.cloud import storage
 from torch.utils.data import Dataset, DataLoader
+from data_preprocess import data_process
 import os
 from os import path
 import sys
@@ -145,7 +146,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
         nDCG@5
         nDCG@10
     """
-    news_dataset = NewsDataset(path.join(directory, 'news_predict_parsed.tsv'))
+    news_dataset = NewsDataset(path.join(directory, 'news_parsed.tsv'))
     news_dataloader = DataLoader(news_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=False,
@@ -214,7 +215,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
         prediction = {news_index[i]: y_pred[i] for i in range(len(news_index))}
 
-        news = pd.read_table(path.join(directory, 'news_predict.tsv'),
+        news = pd.read_table(path.join(directory, 'news.tsv'),
                             header=0,
                             usecols=[0, 2, 6, 7],
                             quoting=csv.QUOTE_NONE,
@@ -270,6 +271,7 @@ def make_prediction(request):
         model.load_state_dict(checkpoint['model_state_dict'])
 
     model.eval()
+    data_process()
     recommendations = predict(model, 'gs://newsnudge/data/predict', config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
     print(recommendations)
     # empty_dataframe()

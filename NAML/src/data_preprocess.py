@@ -281,10 +281,22 @@ def transform_entity_embedding(source, target, entity2int_path):
     np.save(target, entity_embedding_transformed)
 
 
+def data_process():
+    nltk.download('punkt')
+    data_dir = 'gs://newsnudge/data/predict'
+    print('\nProcess data for prediction')
+
+    print('Parse news')
+    parse_news(path.join(data_dir, 'news.tsv'),
+               path.join(data_dir, 'news_parsed.tsv'),
+               path.join(data_dir, 'category2int.tsv'),
+               path.join(data_dir, 'word2int.tsv'),
+               mode='predict')
+
 if __name__ == '__main__':
     nltk.download('punkt')
 
-    data_dir = '../data/NewsNudge'
+    data_dir = 'gs://newsnudge/data/predict'
     # train_dir = '../data/train'
     # val_dir = '../data/val'
     # test_dir = '../data/test'    
@@ -338,8 +350,8 @@ if __name__ == '__main__':
     print('\nProcess data for prediction')
 
     print('Parse news')
-    parse_news(path.join(data_dir, 'news_predict.tsv'),
-               path.join(data_dir, 'news_predict_parsed.tsv'),
+    parse_news(path.join(data_dir, 'news.tsv'),
+               path.join(data_dir, 'news_parsed.tsv'),
                path.join(data_dir, 'category2int.tsv'),
                path.join(data_dir, 'word2int.tsv'),
                mode='predict')
