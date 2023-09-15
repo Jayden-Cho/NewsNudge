@@ -3,7 +3,9 @@ from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
 import torch
 from config import model_name
+from google.cloud import storage
 from torch.utils.data import Dataset, DataLoader
+import os
 from os import path
 import sys
 import pandas as pd
@@ -11,6 +13,7 @@ from ast import literal_eval
 import importlib
 from multiprocessing import Pool
 import csv
+import tempfile 
 import pandas as pd
 
 try:
@@ -230,6 +233,28 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
     return category_to_news
 
+def empty_dataframe():
+    file_path = 'gs://newsnudge/data/predict' 
+    df = pd.read_csv(path.join(file_path, 'news.tsv'))
+    empty_df = pd.DataFrame(columns=df.columns)
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    tsv_content = empty_df.to_csv(sep='\t', index=False, encoding='utf-8')
+    
+    temp_file.write(tsv_content.encode())
+    temp_file.close()
+
+    bucket_name = 'newsnudge'
+    blob_name = '/data/predict/news.tsv'
+    
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    blob.upload_from_filename(temp_file.name)
+
+    # Remove the temporary file
+    os.unlink(temp_file.name)    
 
 def make_prediction(request):
     print('Using device:', device)
@@ -247,6 +272,7 @@ def make_prediction(request):
     model.eval()
     recommendations = predict(model, 'gs://newsnudge/data/predict', config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
     print(recommendations)
+    empty_dataframe()
     
     return "Recommendation successful!"
 
