@@ -272,7 +272,7 @@ def make_prediction(request):
     model.eval()
     recommendations = predict(model, 'gs://newsnudge/data/predict', config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
     print(recommendations)
-    empty_dataframe()
+    # empty_dataframe()
     
     return "Recommendation successful!"
 
