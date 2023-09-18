@@ -275,7 +275,7 @@ def write_email_content(recommendations, file_path):
                         ])
     content = ''
     for category in recommendations:
-        article = news[news['index'] == recommendations[category]]
+        article = news[news['index'] == recommendations[category]].iloc[0]
         content += article['category'] + '\n' + article['title'] + '\n' + article['abstract'] + '\n\n'
 
     return content
