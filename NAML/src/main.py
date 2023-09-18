@@ -258,7 +258,7 @@ def empty_dataframe():
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
 
-    bucket.blob(blob_name).upload_from_string(empty_df.to_csv(index=False, sep='\t' encoding='utf-8'), 'text/tab-separated-values') 
+    bucket.blob(blob_name).upload_from_string(empty_df.to_csv(index=False, sep='\t', encoding='utf-8'), 'text/tab-separated-values') 
 
 '''
 {'Politics': 'N3', 'Economics': 'N10', 'Social': 'N29', 'Life/Cultures': 'N34', 'World': 'N40', 'IT/Science': 'N48'}
