@@ -94,7 +94,7 @@ def parse_news(source, target, category2int_path, word2int_path, mode):
             category2int_path, word2int_path, entity2int_path: Path to load from
     """
     print(f"Parse {source}")
-    news = pd.read_csv(source,
+    news = pd.read_table(source,
                          header=0,
                          usecols=[0, 2, 6, 7],
                          quoting=csv.QUOTE_NONE,
@@ -287,8 +287,8 @@ def data_process():
     print('\nProcess data for prediction')
 
     print('Parse news')
-    parse_news(path.join(data_dir, 'news.csv'),
-               path.join(data_dir, 'news_parsed.csv'),
+    parse_news(path.join(data_dir, 'news.tsv'),
+               path.join(data_dir, 'news_parsed.tsv'),
                path.join(data_dir, 'category2int.tsv'),
                path.join(data_dir, 'word2int.tsv'),
                mode='predict')
@@ -350,8 +350,8 @@ if __name__ == '__main__':
     print('\nProcess data for prediction')
 
     print('Parse news')
-    parse_news(path.join(data_dir, 'news.csv'),
-               path.join(data_dir, 'news_parsed.csv'),
+    parse_news(path.join(data_dir, 'news.tsv'),
+               path.join(data_dir, 'news_parsed.tsv'),
                path.join(data_dir, 'category2int.tsv'),
                path.join(data_dir, 'word2int.tsv'),
                mode='predict')
