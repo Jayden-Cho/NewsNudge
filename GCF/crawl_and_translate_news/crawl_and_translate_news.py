@@ -103,11 +103,12 @@ def crawl_and_translate_news():
     return df
 
 def concat_df(old_df, new_df):
+    # Extract the numerical part of news_index in old_df and find the maximum value
     old_df['news_index_num'] = old_df['index'].str.extract('(\d+)').astype(int)
     max_old_index_num = old_df['news_index_num'].max()
 
     # Update news_index values in new_df based on the maximum value in old_df
-    new_df['news_index_num'] = new_df['index'] + max_old_index_num + 1
+    new_df['news_index_num'] = new_df['index'].str.extract('(\d+)').astype(int) + max_old_index_num
     new_df['index'] = 'N' + new_df['news_index_num'].astype(str)
 
     # Drop the temporary 'news_index_num' column from both DataFrames
@@ -117,6 +118,8 @@ def concat_df(old_df, new_df):
     # Append new_df underneath old_df
     combined_df = pd.concat([old_df, new_df], ignore_index=True)
 
+    # Save the combined DataFrame back to a TSV file
+    combined_df.to_csv('combined_df.tsv', sep='\t', index=False)
     return combined_df
 
 def update_behavior(file_path, news_index):
@@ -159,8 +162,9 @@ def generate_tsv(request):
     print('Dataset ready to go. Merging started')
     file_path = 'gs://newsnudge/data/predict'
 
-    old_df = pd.read_csv(path.join(file_path, 'news.tsv'), on_bad_lines='skip')
+    old_df = pd.read_table(path.join(file_path, 'news.csv'), header=0)
 
+    print('below is the old dataframe:')
     print(old_df)
 
     df = pd.DataFrame(columns=old_df.columns)
@@ -171,29 +175,15 @@ def generate_tsv(request):
         print('Dataframe exists. Concatenate with the existing one.')
         df = concat_df(old_df, new_df)
 
-    print('Push newly crawled news candidates on behaviors.tsv.')
-    update_behavior(file_path, df['index'].tolist())
-
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    tsv_content = df.to_csv(sep='\t', index=False, encoding='utf-8')
-    
-    temp_file.write(tsv_content.encode())
-    temp_file.close()
+    # print('Push newly crawled news candidates on behaviors.tsv.')
+    # update_behavior(file_path, df['index'].tolist())
 
     bucket_name = 'newsnudge'
-    blob_name = 'data/predict/news.tsv'
-    
+    blob_name = 'data/predict/news.csv'
+
     storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
+    bucket = storage_client.get_bucket(bucket_name)
 
-    if blob.exists():
-        print('For news.tsv - blob exists. Start to upload updated dataframe.')
-        blob.upload_from_string(tsv_content)
-    else:
-        print('For news.tsv - no blob was found.')
+    bucket.blob(blob_name).upload_from_string(df.to_csv(index=False, encoding='utf-8'), 'text/csv')
 
-    # Remove the temporary file
-    os.unlink(temp_file.name)
-
-    return 'TSV file generated and added to "news.tsv" in Cloud Storage.'
+    return 'CSV file generated and added to "news.csv" in Cloud Storage.'

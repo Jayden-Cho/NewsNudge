@@ -33,7 +33,7 @@ class NewsDataset(Dataset):
     """
     def __init__(self, news_path):
         super(NewsDataset, self).__init__()
-        self.news_predict_parsed = pd.read_table(
+        self.news_predict_parsed = pd.read_csv(
             news_path,
             usecols=['id'] + config.dataset_attributes['news'],
             converters={
@@ -146,7 +146,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
         nDCG@5
         nDCG@10
     """
-    news_dataset = NewsDataset(path.join(directory, 'news_parsed.tsv'))
+    news_dataset = NewsDataset(path.join(directory, 'news_parsed.csv'))
     news_dataloader = DataLoader(news_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=False,
@@ -219,7 +219,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
         prediction = {news_index[i]: y_pred[i] for i in range(len(news_index))}
 
-        news = pd.read_table(path.join(directory, 'news.tsv'),
+        news = pd.read_csv(path.join(directory, 'news.csv'),
                             header=0,
                             usecols=[0, 2, 6, 7],
                             quoting=csv.QUOTE_NONE,
@@ -240,26 +240,37 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
 def empty_dataframe():
     file_path = 'gs://newsnudge/data/predict' 
-    df = pd.read_csv(path.join(file_path, 'news.tsv'))
+    df = pd.read_csv(path.join(file_path, 'news.csv'))
     empty_df = pd.DataFrame(columns=df.columns)
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    tsv_content = empty_df.to_csv(sep='\t', index=False, encoding='utf-8')
-    
-    temp_file.write(tsv_content.encode())
-    temp_file.close()
-
     bucket_name = 'newsnudge'
-    blob_name = '/data/predict/news.tsv'
-    
+    blob_name = 'data/predict/news.csv'
+
     storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
+    bucket = storage_client.get_bucket(bucket_name)
 
-    blob.upload_from_filename(temp_file.name)
+    bucket.blob(blob_name).upload_from_string(empty_df.to_csv(index=False, encoding='utf-8'), 'text/csv') 
 
-    # Remove the temporary file
-    os.unlink(temp_file.name)    
+'''
+{'Politics': 'N3', 'Economics': 'N10', 'Social': 'N29', 'Life/Cultures': 'N34', 'World': 'N40', 'IT/Science': 'N48'}
+'''
+
+def write_email_content(recommendations, file_path):
+    news = pd.read_csv(path.join(file_path, 'news.csv'),
+                        header=0,
+                        usecols=[0, 2, 6, 7],
+                        quoting=csv.QUOTE_NONE,
+                        names=[
+                            'index', 'category', 'title',
+                            'abstract'
+                        ])
+    content = ''
+    for category in recommendations:
+        article = news[news['index'] == recommendations[category]]
+        content += article['category'] + '\n' + article['title'] + '\n' + article['abstract'] + '\n\n'
+
+    return content
+
 
 def make_prediction(request):
     print('Using device:', device)
@@ -276,8 +287,11 @@ def make_prediction(request):
 
     model.eval()
     data_process()
-    recommendations = predict(model, 'gs://newsnudge/data/predict', config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
+    file_path = 'gs://newsnudge/data/predict' 
+    recommendations = predict(model, file_path, config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
     print(recommendations)
+    # print('Recommendation process finished. Started to write an email content.')
+    # content = write_email_content(recommendations, file_path)
     # empty_dataframe()
     
     return "Recommendation successful!"
