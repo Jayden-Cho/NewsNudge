@@ -107,7 +107,7 @@ def concat_df(old_df, new_df):
     max_old_index_num = old_df['news_index_num'].max()
 
     # Update news_index values in new_df based on the maximum value in old_df
-    new_df['news_index_num'] = new_df.index + max_old_index_num + 1
+    new_df['news_index_num'] = new_df['index'] + max_old_index_num + 1
     new_df['index'] = 'N' + new_df['news_index_num'].astype(str)
 
     # Drop the temporary 'news_index_num' column from both DataFrames
@@ -160,6 +160,8 @@ def generate_tsv(request):
     file_path = 'gs://newsnudge/data/predict'
 
     old_df = pd.read_csv(path.join(file_path, 'news.tsv'), on_bad_lines='skip')
+
+    print(old_df)
 
     df = pd.DataFrame(columns=old_df.columns)
     if old_df.empty:

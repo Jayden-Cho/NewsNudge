@@ -164,10 +164,10 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
                 if id not in news2vector:
                     news2vector[id] = vector
 
-    print('check if news2vector works properly:',news2vector.items())
-
     news2vector['PADDED_NEWS'] = torch.zeros(
         list(news2vector.values())[0].size())
+    
+    print('check if news2vector works properly:',news2vector.items())
 
     user_dataset = UserDataset(path.join(directory, 'behaviors.tsv'),
                                path.join(directory, 'user2int.tsv'))
@@ -178,8 +178,6 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
                                  drop_last=False,
                                  pin_memory=True)
     
-    print('check if user2vector works properly:', user2vector.items())
-
     user2vector = {}
     for minibatch in tqdm(user_dataloader,
                           desc="Calculating vectors for users"):
@@ -194,6 +192,8 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
             for user, vector in zip(user_strings, user_vector):
                 if user not in user2vector:
                     user2vector[user] = vector
+
+    print('check if user2vector works properly:', user2vector.items())
 
     behaviors_dataset = BehaviorsDataset(path.join(directory, 'behaviors.tsv'))
     behaviors_dataloader = DataLoader(behaviors_dataset,
