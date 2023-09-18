@@ -17,6 +17,15 @@ import csv
 import tempfile 
 import pandas as pd
 
+import smtplib
+from email.message import EmailMessage
+from datetime import date
+
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_ADDR = 'tjdrms2023@gmail.com'
+APP_PASSWORD = 'dswjergpnowsylaj'
+
 try:
     Model = getattr(importlib.import_module(f"model.{model_name}"), model_name)
     config = getattr(importlib.import_module('config'), f"{model_name}Config")
@@ -33,7 +42,7 @@ class NewsDataset(Dataset):
     """
     def __init__(self, news_path):
         super(NewsDataset, self).__init__()
-        self.news_predict_parsed = pd.read_csv(
+        self.news_predict_parsed = pd.read_table(
             news_path,
             usecols=['id'] + config.dataset_attributes['news'],
             converters={
@@ -146,7 +155,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
         nDCG@5
         nDCG@10
     """
-    news_dataset = NewsDataset(path.join(directory, 'news_parsed.csv'))
+    news_dataset = NewsDataset(path.join(directory, 'news_parsed.tsv'))
     news_dataloader = DataLoader(news_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=False,
@@ -219,7 +228,7 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
         prediction = {news_index[i]: y_pred[i] for i in range(len(news_index))}
 
-        news = pd.read_csv(path.join(directory, 'news.csv'),
+        news = pd.read_table(path.join(directory, 'news.tsv'),
                             header=0,
                             usecols=[0, 2, 6, 7],
                             quoting=csv.QUOTE_NONE,
@@ -240,23 +249,23 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
 
 def empty_dataframe():
     file_path = 'gs://newsnudge/data/predict' 
-    df = pd.read_csv(path.join(file_path, 'news.csv'))
+    df = pd.read_table(path.join(file_path, 'news.tsv'))
     empty_df = pd.DataFrame(columns=df.columns)
 
     bucket_name = 'newsnudge'
-    blob_name = 'data/predict/news.csv'
+    blob_name = 'data/predict/news.tsv'
 
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
 
-    bucket.blob(blob_name).upload_from_string(empty_df.to_csv(index=False, encoding='utf-8'), 'text/csv') 
+    bucket.blob(blob_name).upload_from_string(empty_df.to_csv(index=False, encoding='utf-8'), 'text/tab-separated-values') 
 
 '''
 {'Politics': 'N3', 'Economics': 'N10', 'Social': 'N29', 'Life/Cultures': 'N34', 'World': 'N40', 'IT/Science': 'N48'}
 '''
 
 def write_email_content(recommendations, file_path):
-    news = pd.read_csv(path.join(file_path, 'news.csv'),
+    news = pd.read_table(path.join(file_path, 'news.tsv'),
                         header=0,
                         usecols=[0, 2, 6, 7],
                         quoting=csv.QUOTE_NONE,
@@ -271,6 +280,27 @@ def write_email_content(recommendations, file_path):
 
     return content
 
+def send_email(content):
+    # Create a SMTP object with server name and port number
+    smtp = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+
+    # Set up server connection
+    smtp.ehlo()
+
+    # Encrypt the connection for privacy issues
+    smtp.starttls()
+
+    # Login with email information
+    smtp.login(EMAIL_ADDR, APP_PASSWORD)
+
+    # Create an email object and its contents
+    msg = EmailMessage()
+    msg['Subject'] = str(date.today()) + ' Breaking News Today by NewsNudge'
+    msg.set_content(content)
+    msg['From'] = EMAIL_ADDR
+    msg['To'] = EMAIL_ADDR
+
+    smtp.send_message(msg)
 
 def make_prediction(request):
     print('Using device:', device)
@@ -290,8 +320,11 @@ def make_prediction(request):
     file_path = 'gs://newsnudge/data/predict' 
     recommendations = predict(model, file_path, config.num_workers) # recommendations = predict(model, './data/predict', config.num_workers)
     print(recommendations)
-    # print('Recommendation process finished. Started to write an email content.')
-    # content = write_email_content(recommendations, file_path)
+    print('Recommendation process finished. Started to write an email content.')
+    content = write_email_content(recommendations, file_path)
+    print('content has been written. Now is to send an email')
+    send_email(content)
+    print('email has been sent.')
     # empty_dataframe()
     
     return "Recommendation successful!"
