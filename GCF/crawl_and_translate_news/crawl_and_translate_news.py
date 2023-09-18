@@ -1,4 +1,5 @@
 import os
+from os import path
 import tempfile 
 import pandas as pd
 from google.cloud import storage
@@ -97,35 +98,98 @@ def crawl_and_translate_news():
     print('Translation started.')
     df['title_google_translated'] = df['title'].apply(lambda text: google_translate(text))
     df['body_google_translated_distilbart_summarized'] = df['body'].apply(lambda text: distilbart_summarize(text))
+    mask = df['body_google_translated_distilbart_summarized'] != "" # remove translation that yielded a KeyError
+    df = df[mask]    
     return df
 
-def generate_tsv(request):
-    print('Main function requested.')
-    df = crawl_and_translate_news()
+def concat_df(old_df, new_df):
+    old_df['news_index_num'] = old_df['index'].str.extract('(\d+)').astype(int)
+    max_old_index_num = old_df['news_index_num'].max()
 
-    print('Dataset ready to go.')
+    # Update news_index values in new_df based on the maximum value in old_df
+    new_df['news_index_num'] = new_df.index + max_old_index_num + 1
+    new_df['index'] = 'N' + new_df['news_index_num'].astype(str)
+
+    # Drop the temporary 'news_index_num' column from both DataFrames
+    old_df.drop(columns=['news_index_num'], inplace=True)
+    new_df.drop(columns=['news_index_num'], inplace=True)
+
+    # Append new_df underneath old_df
+    combined_df = pd.concat([old_df, new_df], ignore_index=True)
+
+    return combined_df
+
+def update_behavior(file_path, news_index):
+    behaviors = pd.read_table(path.join(file_path, 'behaviors.tsv'),
+                            header=None,
+                            usecols=range(5),
+                            names=[
+                                'impression_id', 'user', 'time',
+                                'clicked_news', 'impressions'
+                            ])
+    behaviors['impressions'] = ' '.join(news_index)
+
     temp_file = tempfile.NamedTemporaryFile(delete=False)
-    tsv_content = df.to_csv(sep='\t', index=False, encoding='utf-8')
+    tsv_content = behaviors.to_csv(sep='\t', index=False, encoding='utf-8')
+    
     temp_file.write(tsv_content.encode())
     temp_file.close()
 
     bucket_name = 'newsnudge'
-    blob_name = 'news.tsv'
-
+    blob_name = 'data/predict/behaviors.tsv'
+    
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
     if blob.exists():
-        # If 'news.tsv' exists already, download the existing content
-        existing_content = blob.download_as_text()
-
-        # Append the new content to the existing content
-        new_content = existing_content + tsv_content
-        blob.upload_from_string(new_content)
+        print('For behaviors.tsv - blob exists. Start to upload updated dataframe.')
+        blob.upload_from_string(tsv_content)
     else:
-        # If 'news.tsv' doesn't exist, upload the new content as a new file
-        blob.upload_from_filename(temp_file.name)
+        print('For behaviors.tsv - no blob was found.')    
+
+    # Remove the temporary file
+    os.unlink(temp_file.name)
+
+
+def generate_tsv(request):
+    print('Main function requested.')
+    new_df = crawl_and_translate_news()
+
+    print('Dataset ready to go. Merging started')
+    file_path = 'gs://newsnudge/data/predict'
+
+    old_df = pd.read_csv(path.join(file_path, 'news.tsv'), on_bad_lines='skip')
+
+    df = pd.DataFrame(columns=old_df.columns)
+    if old_df.empty:
+        print('No dataframe exists. Replace with new dataframe.')
+        df = new_df
+    else:
+        print('Dataframe exists. Concatenate with the existing one.')
+        df = concat_df(old_df, new_df)
+
+    print('Push newly crawled news candidates on behaviors.tsv.')
+    update_behavior(file_path, df['index'].tolist())
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    tsv_content = df.to_csv(sep='\t', index=False, encoding='utf-8')
+    
+    temp_file.write(tsv_content.encode())
+    temp_file.close()
+
+    bucket_name = 'newsnudge'
+    blob_name = 'data/predict/news.tsv'
+    
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    if blob.exists():
+        print('For news.tsv - blob exists. Start to upload updated dataframe.')
+        blob.upload_from_string(tsv_content)
+    else:
+        print('For news.tsv - no blob was found.')
 
     # Remove the temporary file
     os.unlink(temp_file.name)

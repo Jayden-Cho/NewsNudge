@@ -164,6 +164,8 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
                 if id not in news2vector:
                     news2vector[id] = vector
 
+    print('check if news2vector works properly:',news2vector.items())
+
     news2vector['PADDED_NEWS'] = torch.zeros(
         list(news2vector.values())[0].size())
 
@@ -175,6 +177,8 @@ def predict(model, directory, num_workers, max_count=sys.maxsize):
                                  num_workers=config.num_workers,
                                  drop_last=False,
                                  pin_memory=True)
+    
+    print('check if user2vector works properly:', user2vector.items())
 
     user2vector = {}
     for minibatch in tqdm(user_dataloader,
@@ -277,21 +281,3 @@ def make_prediction(request):
     # empty_dataframe()
     
     return "Recommendation successful!"
-
-
-# if __name__ == '__main__':
-#     print('Using device:', device)
-#     print(f'Evaluating model {model_name}')
-
-#     model = Model(config).to(device)
-#     from train import latest_checkpoint  # Avoid circular imports
-#     checkpoint_path = latest_checkpoint(path.join('../checkpoint', model_name))
-
-#     if checkpoint_path is not None:
-#         checkpoint = torch.load(checkpoint_path)
-#         model.load_state_dict(checkpoint['model_state_dict'])
-
-#     model.eval()
-#     recommendations = predict(model, '../data/predict',
-#                                        config.num_workers)
-#     print(recommendations)
